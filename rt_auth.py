@@ -1,8 +1,15 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from models import Usuario
 from dependencies import get_session
+from main import bcrypt_context
+from schemes import usuario_scheme, login_scheme
+
 
 auth_rt = APIRouter(prefix="/auth", tags=["auth"])
+
+def criar_token(id_usuario):
+    token = f"advasvafvafv{id_usuario}"
+    return token
 
 @auth_rt.get("/")
 async def home():
@@ -12,12 +19,22 @@ async def home():
     return {"mensagem": "Você está acessando a rota de autorização"}
 
 @auth_rt.post("/criar_conta")
-async def criar_conta(email: str, senha: str, nome: str, session=Depends(get_session)):
-    usuario = session.query(Usuario).filter(Usuario.email==email).first()
+async def criar_conta(Usuario_scheme: usuario_scheme, session=Depends(get_session)):
+    usuario = session.query(Usuario).filter(Usuario.email==Usuario_scheme.email).first()
     if usuario:
-        return {"mensagem": "Já existe um usuário no email"}
+        raise HTTPException(status_code=400, detail="E-mail usuário já cadastrado")
     else:
-        novo_usuario = Usuario(nome, email, senha)
+        senha_criptografada = bcrypt_context.hash(Usuario_scheme.senha)
+        novo_usuario = Usuario(Usuario_scheme.nome, Usuario_scheme.email, senha_criptografada, Usuario_scheme.ativo, Usuario_scheme.admin)
         session.add(novo_usuario)
         session.commit()
-        return {"mensagem": "usuário cadstrado com sucesso"}
+        raise HTTPException(status_code=200, detail="Novo usuário cadstrado com sucesso")
+
+@auth_rt.post("/login")
+async def login(login_scheme: login_scheme ,session=Depends(get_session)):
+    usuario = session.query(Usuario).filter(Usuario.email==login_scheme.email).first()
+    if not usuario:
+        raise HTTPException(status_code=400, detail="Usuário não encontrado.")
+    else:
+        access_token = criar_token(usuario.id)
+        return {"Access-Token": access_token, "Token-type": "Bearer"}

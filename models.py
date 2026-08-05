@@ -1,9 +1,8 @@
-from sqlalchemy import create_engine, Column, String, Integer, Boolean, Float, ForeignKey # O "create_engine" permite criar bando de dados
-from sqlalchemy.orm import declarative_base #Base do banco de dados
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, Float, ForeignKey 
+from sqlalchemy.orm import declarative_base #Base do banco de dados, facilitando o ORM
 from sqlalchemy_utils.types import ChoiceType
 
 db = create_engine("sqlite:///banco.db")
-
 base = declarative_base() 
 
 class Usuario(base):
