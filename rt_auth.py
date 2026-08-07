@@ -5,6 +5,7 @@ from main import bcrypt_context, ALGORITHM, ACESS_TOKEN_EXPIRE_MINUTES, SECRET_K
 from schemes import usuario_scheme, login_scheme
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
+from fastapi.security import OAuth2PasswordRequestForm
 
 
 auth_rt = APIRouter(prefix="/auth", tags=["auth"])
@@ -43,7 +44,7 @@ async def criar_conta(Usuario_scheme: usuario_scheme, session=Depends(get_sessio
         raise HTTPException(status_code=200, detail="Novo usuário cadstrado com sucesso")
 
 @auth_rt.post("/login")
-async def login(login_scheme: login_scheme ,session=Depends(get_session)):
+async def login(login_scheme: login_scheme, session=Depends(get_session)):
     usuario = autenticar_usuario(login_scheme.email, login_scheme.senha, session)
     if not usuario:
         raise HTTPException(status_code=400, detail="Usuário não encontrado.")
@@ -51,6 +52,16 @@ async def login(login_scheme: login_scheme ,session=Depends(get_session)):
         access_token = criar_token(usuario.id)
         refresh_token = criar_token(usuario.id, validade=timedelta(days=7))
         return {"Access-Token": access_token, "refresh_token": refresh_token,"Token-type": "Bearer"}
+
+
+@auth_rt.post("/login_form")
+async def login_form(dados_formulario: OAuth2PasswordRequestForm = Depends(), session=Depends(get_session)):
+    usuario = autenticar_usuario(dados_formulario.username, dados_formulario.password, session)
+    if not usuario:
+        raise HTTPException(status_code=400, detail="Usuário não encontrado.")
+    else:
+        access_token = criar_token(usuario.id)
+        return {"Access-Token": access_token, "Token-type": "Bearer"}
 
 @auth_rt.get("/refresh")
 async def use_refresh_token(usuario: Usuario=Depends(verificar_token)):
