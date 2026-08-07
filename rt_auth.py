@@ -1,15 +1,27 @@
 from fastapi import APIRouter, Depends, HTTPException
 from models import Usuario
-from dependencies import get_session
-from main import bcrypt_context
+from dependencies import get_session, verificar_token
+from main import bcrypt_context, ALGORITHM, ACESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY
 from schemes import usuario_scheme, login_scheme
+from jose import jwt, JWTError
+from datetime import datetime, timedelta, timezone
 
 
 auth_rt = APIRouter(prefix="/auth", tags=["auth"])
 
-def criar_token(id_usuario):
-    token = f"advasvafvafv{id_usuario}"
-    return token
+def criar_token(id_usuario,validade=timedelta(minutes=ACESS_TOKEN_EXPIRE_MINUTES)):
+    data_expiracao = datetime.now(timezone.utc) + validade
+    dic_info = {"sub": str(id_usuario), "exp": data_expiracao}
+    encoded_jwt = jwt.encode(dic_info, SECRET_KEY, ALGORITHM)
+    return encoded_jwt
+
+def autenticar_usuario(email, senha, session):
+    usuario = session.query(Usuario).filter(Usuario.email==email).first()
+    if not usuario:
+        return False
+    elif not bcrypt_context.verify(senha, usuario.senha):
+        return False
+    return usuario
 
 @auth_rt.get("/")
 async def home():
@@ -32,9 +44,14 @@ async def criar_conta(Usuario_scheme: usuario_scheme, session=Depends(get_sessio
 
 @auth_rt.post("/login")
 async def login(login_scheme: login_scheme ,session=Depends(get_session)):
-    usuario = session.query(Usuario).filter(Usuario.email==login_scheme.email).first()
+    usuario = autenticar_usuario(login_scheme.email, login_scheme.senha, session)
     if not usuario:
         raise HTTPException(status_code=400, detail="Usuário não encontrado.")
     else:
         access_token = criar_token(usuario.id)
-        return {"Access-Token": access_token, "Token-type": "Bearer"}
+        refresh_token = criar_token(usuario.id, validade=timedelta(days=7))
+        return {"Access-Token": access_token, "refresh_token": refresh_token,"Token-type": "Bearer"}
+
+@auth_rt.get("/refresh")
+async def use_refresh_token(usuario: Usuario=Depends(verificar_token)):
+    print("")
