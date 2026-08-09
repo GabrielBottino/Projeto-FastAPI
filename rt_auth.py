@@ -51,7 +51,7 @@ async def login(login_scheme: login_scheme, session=Depends(get_session)):
     else:
         access_token = criar_token(usuario.id)
         refresh_token = criar_token(usuario.id, validade=timedelta(days=7))
-        return {"Access-Token": access_token, "refresh_token": refresh_token,"Token-type": "Bearer"}
+        return {"access_token": access_token, "refresh_token": refresh_token,"token_type": "bearer"}
 
 
 @auth_rt.post("/login_form")
@@ -61,8 +61,9 @@ async def login_form(dados_formulario: OAuth2PasswordRequestForm = Depends(), se
         raise HTTPException(status_code=400, detail="Usuário não encontrado.")
     else:
         access_token = criar_token(usuario.id)
-        return {"Access-Token": access_token, "Token-type": "Bearer"}
+        return {"access_token": access_token, "token_type": "bearer"}
 
 @auth_rt.get("/refresh")
 async def use_refresh_token(usuario: Usuario=Depends(verificar_token)):
-    print("")
+    acess_token = criar_token(usuario.id)
+    return {"acess_token": acess_token, "token_type": "bearer"}
