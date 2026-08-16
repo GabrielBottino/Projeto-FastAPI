@@ -3,3 +3,4 @@ alembic.ini
 alembic/
 __pycache__/
 .env
+teste.py
